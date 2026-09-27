@@ -499,65 +499,86 @@ export default function AtlasHQ() {
           </div>
 
           {/* NAVIGATION */}
-          <nav className="flex-1 overflow-y-auto px-5 py-7">
-            {navigation.map((section) => (
-              <div
-                key={section.label}
-                className="mb-8"
-              >
-                <p className="mb-3 px-3 text-[8px] font-medium tracking-[0.22em] text-neutral-400">
-                  {section.label}
-                </p>
+<nav className="flex-1 overflow-y-auto px-5 py-7">
+  {navigation.map((section) => (
+    <div
+      key={section.label}
+      className="mb-8"
+    >
+      <p className="mb-3 px-3 text-[8px] font-medium tracking-[0.22em] text-neutral-400">
+        {section.label}
+      </p>
 
-                <div className="space-y-1">
-                  {section.items.map((item) => (
-                    <button
-                      key={`${section.label}-${item}`}
-                      type="button"
-                      onClick={() =>
-                        setActivePage(item)
-                      }
-                      className={`w-full border px-3 py-2.5 text-left text-[11px] transition ${
-                        activePage === item
-                          ? "border-black bg-black text-white"
-                          : "border-transparent hover:border-black/20"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                         <span>{item}</span>
+      <div className="space-y-1">
+        {section.items.map((item) => (
+          <button
+            key={`${section.label}-${item}`}
+            type="button"
+            onClick={() => {
+              if (item === "Atlas AI Team") {
+                if (!activeBusiness) return;
 
-                         {item === "Business Vault" && (
-                           <VaultLock />
-                           )}
-                     </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </nav>
+                router.push(
+                  `/team?business=${activeBusiness.id}`
+                );
+                return;
+              }
 
-          {/* LOWER NAVIGATION */}
-          <div className="border-t border-black/20 px-5 py-5">
-            {[
-              "Business Brain",
-              "Vacation Mode",
-              "Settings",
-            ].map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setActivePage(item)}
-                className={`mb-1 w-full border px-3 py-2.5 text-left text-[11px] transition ${
-                  activePage === item
-                    ? "border-black bg-black text-white"
-                    : "border-transparent hover:border-black/20"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+              setActivePage(item);
+            }}
+            className={`w-full border px-3 py-2.5 text-left text-[11px] transition ${
+              activePage === item
+                ? "border-black bg-black text-white"
+                : "border-transparent hover:border-black/20"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>{item}</span>
+
+              {item === "Business Vault" && (
+                <VaultLock />
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  ))}
+</nav>
+
+
+{/* LOWER NAVIGATION */}
+<div className="border-t border-black/20 px-5 py-5">
+  {[
+    "Business Brain",
+    "Vacation Mode",
+    "Settings",
+  ].map((item) => (
+    <button
+      key={item}
+      type="button"
+      onClick={() => {
+        if (item === "Business Brain") {
+          if (!activeBusiness) return;
+
+          router.push(
+            `/brain?business=${activeBusiness.id}`
+          );
+          return;
+        }
+
+        setActivePage(item);
+      }}
+      className={`mb-1 w-full border px-3 py-2.5 text-left text-[11px] transition ${
+        activePage === item
+          ? "border-black bg-black text-white"
+          : "border-transparent hover:border-black/20"
+      }`}
+    >
+      {item}
+    </button>
+  ))}
+</div>
 
           {/* ACCOUNT */}
           <div className="border-t border-black/20 px-8 py-5">
