@@ -2,10 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Home() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,12 +25,14 @@ export default function Home() {
     });
 
     if (error) {
-      setError("Email or password is incorrect.");
-      setLoading(false);
-      return;
-    }
+  console.error("LOGIN ERROR:", error);
+  setError(error.message);
+  setLoading(false);
+  return;
+}
 
     router.push("/hq");
+router.refresh();
   }
 
   return (
@@ -116,11 +119,12 @@ export default function Home() {
 
           <div className="mt-8 flex justify-between text-[10px] tracking-wide text-neutral-400">
             <button
-              type="button"
-              className="transition hover:text-black"
-            >
-              Forgot password?
-            </button>
+  type="button"
+  onClick={() => router.push("/forgot-password")}
+  className="transition hover:text-black"
+>
+  Forgot password?
+</button>
 
             <button
               type="button"

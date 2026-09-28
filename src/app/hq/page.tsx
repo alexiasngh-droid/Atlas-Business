@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 type Business = {
   id: string;
@@ -294,6 +294,7 @@ const typeLabels: Record<string, string> = {
 export default function AtlasHQ() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
 
   const businessId = searchParams.get("business");
 
@@ -310,20 +311,27 @@ export default function AtlasHQ() {
     async function loadAtlas() {
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
 
+      if (userError) {
+        console.error("Auth error:", userError);
+      }
+
       if (!user) {
-        router.push("/");
+        router.replace("/");
         return;
       }
 
       // Load the profile belonging to the authenticated account.
-      const { data: profileData, error: profileError } =
-        await supabase
-          .from("profiles")
-          .select("first_name, last_name, display_name")
-          .eq("id", user.id)
-          .maybeSingle();
+      const {
+        data: profileData,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, display_name")
+        .eq("id", user.id)
+        .maybeSingle();
 
       if (profileError) {
         console.error("Profile error:", profileError);
@@ -331,63 +339,109 @@ export default function AtlasHQ() {
 
       setProfile(profileData);
 
-      // Load only businesses this authenticated user can access.
-      // Supabase RLS provides the ownership protection.
-      const { data, error } = await supabase
+      // RLS limits this query to businesses the
+      // authenticated account is permitted to access.
+      const {
+        data,
+        error,
+      } = await supabase
         .from("businesses")
         .select("id, name, business_type")
-        .order("created_at", { ascending: true });
+        .order("created_at", {
+          ascending: true,
+        });
 
       if (error) {
-        console.error("Business loading error:", error);
+        console.error(
+          "Business loading error:",
+          error
+        );
+
         setLoadingBusinesses(false);
         return;
       }
 
-      const loadedBusinesses = data ?? [];
+      const loadedBusinesses =
+        data ?? [];
 
-      setBusinesses(loadedBusinesses);
+      setBusinesses(
+        loadedBusinesses
+      );
 
-      if (loadedBusinesses.length === 0) {
-        router.push("/business/new");
+      if (
+        loadedBusinesses.length === 0
+      ) {
+        router.push(
+          "/business/new"
+        );
+
         return;
       }
 
-      const requestedBusiness = loadedBusinesses.find(
-        (business) => business.id === businessId
-      );
+      const requestedBusiness =
+        loadedBusinesses.find(
+          (business) =>
+            business.id ===
+            businessId
+        );
 
       const selectedBusiness =
-        requestedBusiness ?? loadedBusinesses[0];
+        requestedBusiness ??
+        loadedBusinesses[0];
 
-      setActiveBusiness(selectedBusiness);
-      setLoadingBusinesses(false);
+      setActiveBusiness(
+        selectedBusiness
+      );
 
-      if (!businessId || !requestedBusiness) {
-        router.replace(`/hq?business=${selectedBusiness.id}`);
+      setLoadingBusinesses(
+        false
+      );
+
+      if (
+        !businessId ||
+        !requestedBusiness
+      ) {
+        router.replace(
+          `/hq?business=${selectedBusiness.id}`
+        );
       }
     }
 
     loadAtlas();
-  }, [businessId, router]);
+
+  }, [
+    businessId,
+    router,
+    supabase,
+  ]);
 
   const accountName =
     profile?.display_name ||
     profile?.first_name ||
     "Account";
 
-  function switchBusiness(business: Business) {
-    setActiveBusiness(business);
+  function switchBusiness(
+    business: Business
+  ) {
+    setActiveBusiness(
+      business
+    );
+
     setSwitcherOpen(false);
+
     setActivePage("HQ");
 
-    router.push(`/hq?business=${business.id}`);
+    router.push(
+      `/hq?business=${business.id}`
+    );
   }
 
   const specializedNavigation =
     navigationByType[
-      activeBusiness?.business_type ?? "general"
-    ] ?? navigationByType.general;
+      activeBusiness?.business_type ??
+        "general"
+    ] ??
+    navigationByType.general;
 
   const navigation = [
     ...coreNavigation,
@@ -578,6 +632,20 @@ export default function AtlasHQ() {
       {item}
     </button>
   ))}
+
+  <div className="mt-5 border-t border-black/10 pt-5">
+    <button
+      type="button"
+      onClick={async () => {
+        await supabase.auth.signOut();
+        router.push("/");
+        router.refresh();
+      }}
+      className="w-full border border-transparent px-3 py-2.5 text-left text-[10px] uppercase tracking-[0.18em] text-neutral-400 transition hover:border-black/20 hover:text-black"
+    >
+      Log Out
+    </button>
+  </div>
 </div>
 
           {/* ACCOUNT */}
