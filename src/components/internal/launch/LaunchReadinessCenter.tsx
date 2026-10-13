@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { registry } from "@/lib/internal/systemRegistry";
 
 type LaunchStatus =
   | "Implemented — Testing Required"
@@ -12,6 +13,7 @@ type LaunchItem = {
   description: string;
   status: LaunchStatus;
   priority: "Critical" | "High" | "Medium";
+  systemIds: string[];
 };
 
 const launchItems: LaunchItem[] = [
@@ -21,6 +23,7 @@ const launchItems: LaunchItem[] = [
       "Verify signup, login, session protection, account ownership, and access controls.",
     status: "Review Required",
     priority: "Critical",
+    systemIds: ["authentication"],
   },
   {
     name: "Supabase Security & RLS",
@@ -28,6 +31,13 @@ const launchItems: LaunchItem[] = [
       "Test business isolation, database policies, privileged functions, and authorization.",
     status: "Review Required",
     priority: "Critical",
+    systemIds: [
+      "authentication",
+      "business-onboarding",
+      "business-brain",
+      "ai-team",
+      "atlas-command",
+    ],
   },
   {
     name: "Stripe Billing & Subscriptions",
@@ -35,6 +45,7 @@ const launchItems: LaunchItem[] = [
       "Implement checkout, subscription lifecycle, trials, entitlements, and webhooks.",
     status: "In Development",
     priority: "Critical",
+    systemIds: ["billing"],
   },
   {
     name: "Affiliate & Invitation System",
@@ -42,6 +53,7 @@ const launchItems: LaunchItem[] = [
       "Create personalized invitations, referral tracking, contracts, and commission workflows.",
     status: "In Development",
     priority: "Critical",
+    systemIds: ["affiliates"],
   },
   {
     name: "Atlas Business Onboarding",
@@ -49,6 +61,7 @@ const launchItems: LaunchItem[] = [
       "Complete onboarding, business creation, plan selection, and first-use experience.",
     status: "Implemented — Testing Required",
     priority: "High",
+    systemIds: ["business-onboarding", "billing"],
   },
   {
     name: "AI Operations & Cost Controls",
@@ -56,6 +69,7 @@ const launchItems: LaunchItem[] = [
       "Implement AI usage metering, cost tracking, plan budgets, and abuse protections.",
     status: "In Development",
     priority: "High",
+    systemIds: ["ai-team"],
   },
   {
     name: "Integrations & Atlas Assistant",
@@ -63,6 +77,7 @@ const launchItems: LaunchItem[] = [
       "Develop supported integrations with secure permissions and approved actions.",
     status: "In Development",
     priority: "High",
+    systemIds: ["integrations"],
   },
   {
     name: "Legal & Compliance",
@@ -70,6 +85,7 @@ const launchItems: LaunchItem[] = [
       "Finalize customer terms, privacy policy, affiliate agreements, and legal review.",
     status: "Review Required",
     priority: "Critical",
+    systemIds: [],
   },
   {
     name: "Customer Journey Testing",
@@ -77,6 +93,12 @@ const launchItems: LaunchItem[] = [
       "Test invitation, signup, onboarding, trial, payment, upgrade, downgrade, and cancellation.",
     status: "Not Started",
     priority: "Critical",
+    systemIds: [
+      "authentication",
+      "business-onboarding",
+      "billing",
+      "affiliates",
+    ],
   },
   {
     name: "Production Deployment",
@@ -84,6 +106,7 @@ const launchItems: LaunchItem[] = [
       "Configure domain, hosting, production environment, monitoring, and deployment checks.",
     status: "Not Started",
     priority: "Critical",
+    systemIds: ["atlas-command"],
   },
 ];
 
@@ -244,71 +267,121 @@ export default function LaunchReadinessCenter() {
           }}
         >
           Initial planning assessment — manually maintained.
-          Not connected to live development or testing data.
+          System development stages are referenced from the
+          shared Global System Registry. Neither source
+          represents verified production readiness.
         </p>
 
         <div style={{ marginTop: "24px" }}>
-          {launchItems.map((item) => (
-            <div
-              key={item.name}
-              style={{
-                padding: "20px 0",
-                borderTop: "1px solid #333333",
-              }}
-            >
+          {launchItems.map((item) => {
+            const relatedSystems = item.systemIds
+              .map((id) =>
+                registry.find((entry) => entry.id === id)
+              )
+              .filter(
+                (entry): entry is (typeof registry)[number] =>
+                  entry !== undefined
+              );
+
+            return (
               <div
+                key={item.name}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  flexWrap: "wrap",
-                  gap: "12px",
+                  padding: "20px 0",
+                  borderTop: "1px solid #333333",
                 }}
               >
-                <div style={{ flex: "1 1 280px" }}>
-                  <h4 style={{ fontSize: "15px" }}>
-                    {item.name}
-                  </h4>
-
-                  <p
-                    style={{
-                      color: "#999999",
-                      fontSize: "13px",
-                      marginTop: "8px",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    {item.description}
-                  </p>
-                </div>
-
                 <div
                   style={{
-                    textAlign: "right",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    flexWrap: "wrap",
+                    gap: "12px",
                   }}
                 >
-                  <p
-                    style={{
-                      color: statusColors[item.status],
-                      fontSize: "12px",
-                    }}
-                  >
-                    {item.status}
-                  </p>
+                  <div style={{ flex: "1 1 280px" }}>
+                    <h4 style={{ fontSize: "15px" }}>
+                      {item.name}
+                    </h4>
 
-                  <p
-                    style={{
-                      color: "#777777",
-                      fontSize: "12px",
-                      marginTop: "8px",
-                    }}
-                  >
-                    {item.priority} Priority
-                  </p>
+                    <p
+                      style={{
+                        color: "#999999",
+                        fontSize: "13px",
+                        marginTop: "8px",
+                        lineHeight: "1.6",
+                      }}
+                    >
+                      {item.description}
+                    </p>
+
+                    {relatedSystems.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: "14px",
+                          display: "grid",
+                          gap: "8px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            color: "#777777",
+                            fontSize: "11px",
+                            letterSpacing: "1px",
+                          }}
+                        >
+                          RELATED SYSTEMS
+                        </p>
+
+                        {relatedSystems.map((system) => (
+                          <div
+                            key={system.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              flexWrap: "wrap",
+                              gap: "8px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            <span style={{ color: "#aaaaaa" }}>
+                              {system.name}
+                            </span>
+
+                            <span style={{ color: "#dddddd" }}>
+                              {system.development}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <p
+                      style={{
+                        color: statusColors[item.status],
+                        fontSize: "12px",
+                      }}
+                    >
+                      {item.status}
+                    </p>
+
+                    <p
+                      style={{
+                        color: "#777777",
+                        fontSize: "12px",
+                        marginTop: "8px",
+                      }}
+                    >
+                      {item.priority} Priority
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -322,6 +395,8 @@ export default function LaunchReadinessCenter() {
       >
         Workstream statuses are preliminary planning
         classifications, not verified production readiness.
+        A system marked Implemented may still require security
+        review, integration testing, and deployment validation.
         Launch blockers must be cleared through implementation,
         testing, and appropriate reviews.
       </p>
