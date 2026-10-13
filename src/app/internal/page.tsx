@@ -1,4 +1,6 @@
 
+import LaunchReadinessCenter from "@/components/internal/launch/LaunchReadinessCenter";
+
 const departments = [
   {
     name: "CEO Overview",
@@ -250,6 +252,8 @@ export default function AtlasCommandHome() {
             Status: Registry foundation planned
           </p>
         </section>
+
+<LaunchReadinessCenter />
 
         <footer
           style={{
