@@ -1,13 +1,22 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import {
   registry,
   type DevelopmentStatus,
 } from "@/lib/internal/systemRegistry";
+
+type LiveSystem = {
+  id: string;
+  development_status: DevelopmentStatus;
+  security_status: string;
+  notes: string;
+  updated_at: string;
+  updated_by: string | null;
+};
 
 const statuses: Array<"All" | DevelopmentStatus> = [
   "All",
@@ -17,20 +26,102 @@ const statuses: Array<"All" | DevelopmentStatus> = [
   "Production-ready",
 ];
 
+const panel = {
+  background: "#19191c",
+  border: "1px solid #333",
+  borderRadius: 12,
+  padding: 22,
+};
+
 export default function SystemRegistryPage() {
   const [search, setSearch] = useState("");
-
   const [status, setStatus] =
     useState<"All" | DevelopmentStatus>("All");
-
   const [selectedId, setSelectedId] = useState<string | null>(
     "ai-team"
+  );
+
+  const [liveSystems, setLiveSystems] = useState<
+    Record<string, LiveSystem>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadRegistry() {
+      try {
+        const response = await fetch(
+          "/api/internal/registry",
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Registry request failed (${response.status})`
+          );
+        }
+
+        const result: { systems: LiveSystem[] } =
+          await response.json();
+
+        const byId: Record<string, LiveSystem> = {};
+
+        for (const system of result.systems) {
+          byId[system.id] = system;
+        }
+
+        setLiveSystems(byId);
+        setLoadError(null);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load registry"
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadRegistry();
+
+    return () => controller.abort();
+  }, []);
+
+  const systems = useMemo(
+    () =>
+      registry.map((entry) => {
+        const live = liveSystems[entry.id];
+
+        return {
+          ...entry,
+          development:
+            live?.development_status ?? entry.development,
+          security:
+            live?.security_status ?? entry.security,
+          notes: live?.notes ?? entry.notes,
+          hasLiveRecord: Boolean(live),
+          updatedAt: live?.updated_at ?? null,
+        };
+      }),
+    [liveSystems]
   );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return registry.filter((entry) => {
+    return systems.filter((entry) => {
       const matchesStatus =
         status === "All" || entry.development === status;
 
@@ -50,17 +141,11 @@ export default function SystemRegistryPage() {
 
       return matchesStatus && matchesSearch;
     });
-  }, [search, status]);
+  }, [systems, search, status]);
 
   const selected =
-    registry.find((entry) => entry.id === selectedId) ?? null;
-
-  const panel = {
-    background: "#19191c",
-    border: "1px solid #333",
-    borderRadius: 12,
-    padding: 22,
-  };
+    systems.find((entry) => entry.id === selectedId) ??
+    null;
 
   return (
     <main
@@ -106,8 +191,26 @@ export default function SystemRegistryPage() {
             marginTop: 12,
           }}
         >
-          Manually maintained records — not live monitoring
+          {loading
+            ? "Loading saved registry records..."
+            : loadError
+              ? "Live registry unavailable"
+              : "Saved statuses from Supabase — architecture manually maintained"}
         </p>
+
+        {loadError && (
+          <p
+            role="alert"
+            style={{
+              color: "#f0aaaa",
+              fontSize: 13,
+              marginTop: 12,
+            }}
+          >
+            {loadError}. Displaying local registry values.
+            Changes cannot be saved.
+          </p>
+        )}
 
         <div
           style={{
@@ -167,7 +270,7 @@ export default function SystemRegistryPage() {
             marginTop: 18,
           }}
         >
-          {filtered.length} of {registry.length} systems
+          {filtered.length} of {systems.length} systems
         </p>
 
         <div
@@ -333,6 +436,22 @@ export default function SystemRegistryPage() {
                     {selected.notes}
                   </p>
                 </div>
+
+                {selected.hasLiveRecord &&
+                  selected.updatedAt && (
+                    <p
+                      style={{
+                        color: "#777",
+                        fontSize: 12,
+                        marginTop: 24,
+                      }}
+                    >
+                      Last saved:{" "}
+                      {new Date(
+                        selected.updatedAt
+                      ).toLocaleString()}
+                    </p>
+                  )}
               </>
             ) : (
               <p style={{ color: "#aaa" }}>
