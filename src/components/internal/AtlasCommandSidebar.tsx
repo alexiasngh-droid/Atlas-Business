@@ -79,7 +79,7 @@ export default function AtlasCommandSidebar() {
             (department.path !== "/internal" &&
               pathname.startsWith(department.path + "/"));
 
-          const available = department.path === "/internal";
+          const available = true;
 
           const content = (
             <span
