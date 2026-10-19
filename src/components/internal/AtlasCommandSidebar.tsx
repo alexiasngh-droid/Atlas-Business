@@ -22,6 +22,10 @@ const departments = [
 export default function AtlasCommandSidebar() {
   const pathname = usePathname();
 
+  const launchActive =
+    pathname === "/internal/launch" ||
+    pathname.startsWith("/internal/launch/");
+
   return (
     <aside
       style={{
@@ -68,15 +72,14 @@ export default function AtlasCommandSidebar() {
         </p>
       </div>
 
-      <nav aria-label="Atlas Command departments">
+      <nav aria-label="Atlas Command navigation">
         {departments.map((department) => {
           const active =
             pathname === department.path ||
             (department.path !== "/internal" &&
               pathname.startsWith(department.path + "/"));
 
-          const available =
-            department.path === "/internal";
+          const available = department.path === "/internal";
 
           const content = (
             <span
@@ -90,6 +93,7 @@ export default function AtlasCommandSidebar() {
               }}
             >
               {department.name}
+
               {!available && (
                 <span
                   style={{
@@ -110,6 +114,26 @@ export default function AtlasCommandSidebar() {
                 <Link href={department.path}>{content}</Link>
               ) : (
                 content
+              )}
+
+              {department.name === "CEO Overview" && (
+                <Link href="/internal/launch">
+                  <span
+                    style={{
+                      display: "block",
+                      marginLeft: 12,
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: launchActive ? "#fff" : "#aaa",
+                      background: launchActive
+                        ? "#29292e"
+                        : "transparent",
+                    }}
+                  >
+                    ↳ Launch Operations
+                  </span>
+                </Link>
               )}
 
               {department.name === "Database & Code" && (

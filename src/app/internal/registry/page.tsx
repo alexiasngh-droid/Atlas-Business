@@ -44,6 +44,12 @@ export default function SystemRegistryPage() {
   const [liveSystems, setLiveSystems] = useState<
     Record<string, LiveSystem>
   >({});
+  const [draftStatuses, setDraftStatuses] = useState<
+    Record<string, DevelopmentStatus>
+  >({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(
     null
@@ -146,6 +152,69 @@ export default function SystemRegistryPage() {
   const selected =
     systems.find((entry) => entry.id === selectedId) ??
     null;
+
+  const selectedDraft = selected
+    ? (draftStatuses[selected.id] ?? selected.development)
+    : null;
+
+  async function saveDevelopmentStatus() {
+    if (
+      !selected ||
+      !selected.hasLiveRecord ||
+      loadError ||
+      loading ||
+      savingId ||
+      selectedDraft === selected.development
+    ) {
+      return;
+    }
+
+    const systemId = selected.id;
+    const newStatus = selectedDraft;
+    setSavingId(systemId);
+    setSaveError(null);
+    setSaveSuccessId(null);
+
+    try {
+      const response = await fetch("/api/internal/registry/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({
+          id: systemId,
+          development_status: newStatus,
+        }),
+      });
+
+      const result: {
+        system?: LiveSystem;
+        error?: string;
+      } = await response.json();
+
+      if (!response.ok || !result.system) {
+        throw new Error(result.error ?? "Unable to save status.");
+      }
+
+      setLiveSystems((current) => ({
+        ...current,
+        [systemId]: result.system!,
+      }));
+      setDraftStatuses((current) => {
+        if (current[systemId] !== newStatus) return current;
+        const next = { ...current };
+        delete next[systemId];
+        return next;
+      });
+      setSaveSuccessId(systemId);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Unable to save status."
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   return (
     <main
@@ -409,10 +478,87 @@ export default function SystemRegistryPage() {
 
                 <div style={{ marginTop: 24 }}>
                   <h3>Development Status</h3>
-
-                  <p style={{ color: "#aaa", marginTop: 8 }}>
-                    {selected.development}
-                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 10,
+                      marginTop: 10,
+                    }}
+                  >
+                    <select
+                      aria-label={`Development status for ${selected.name}`}
+                      value={selectedDraft ?? selected.development}
+                      disabled={
+                        loading ||
+                        Boolean(loadError) ||
+                        !selected.hasLiveRecord ||
+                        Boolean(savingId)
+                      }
+                      onChange={(event) => {
+                        setDraftStatuses((current) => ({
+                          ...current,
+                          [selected.id]: event.target.value as DevelopmentStatus,
+                        }));
+                        setSaveError(null);
+                        setSaveSuccessId(null);
+                      }}
+                      style={{
+                        padding: 12,
+                        background: "#0b0b0d",
+                        color: "#fff",
+                        border: "1px solid #444",
+                        borderRadius: 8,
+                        flex: "1 1 180px",
+                      }}
+                    >
+                      {statuses.filter((item) => item !== "All").map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={saveDevelopmentStatus}
+                      disabled={
+                        loading ||
+                        Boolean(loadError) ||
+                        !selected.hasLiveRecord ||
+                        Boolean(savingId) ||
+                        selectedDraft === selected.development
+                      }
+                      style={{
+                        padding: "12px 20px",
+                        background: "#fff",
+                        color: "#111",
+                        border: "1px solid #fff",
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        cursor: savingId ? "wait" : "pointer",
+                        opacity:
+                          loading ||
+                          loadError ||
+                          !selected.hasLiveRecord ||
+                          savingId ||
+                          selectedDraft === selected.development
+                            ? 0.45
+                            : 1,
+                      }}
+                    >
+                      {savingId === selected.id ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                  {saveError && !savingId && (
+                    <p role="alert" style={{ color: "#f0aaaa", marginTop: 10, fontSize: 13 }}>
+                      {saveError}
+                    </p>
+                  )}
+                  {saveSuccessId === selected.id && !savingId && (
+                    <p role="status" style={{ color: "#aaa", marginTop: 10, fontSize: 13 }}>
+                      Status saved to Supabase.
+                    </p>
+                  )}
                 </div>
 
                 <div style={{ marginTop: 24 }}>
